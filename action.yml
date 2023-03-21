@@ -1,53 +1,33 @@
-name: "Create Dockerfile and push to ACR"
-description: ""
+name: "Generate Version"
+description: "Get the dependencies (via npm) and cache them."
 inputs:
-  azure-client-id:
-    description: "The AD App Registrations id"
-    required: true
-  azure-tenant-id:
-    description: "The Ad Tenant Id"
-    required: true
-  azure-subscription:
-    description: "The Azure Subscription Id"
-    required: true
-  azure-container-registry-name:
-    description: "The name of Azure container registry"
-    required: true
-  docker-file-path:
-    description: "Location of the docker file"
-    required: true
-  version-tag:
-    description: "Version to tag the dockerfile with"
-    required: true
-  service-name:
-    description: "The name of your service"
+  prefix-tag:
+    description: "The service name so it can be distinguised in tags"
     required: true
   github-token:
     description: "Github token"
     required: true
+outputs:
+  new-tag:
+    description: "The new bumped version"
+    value: ${{ steps.new-tag.outputs.generated-tag }}
 runs:
   using: "composite" #important its named correct
   steps:
+    - name: Print prefix
+      run: echo ${{inputs.prefix-tag}}
+      shell: bash
     - name: Checkout
       uses: actions/checkout@v3
-
-    - name: Azure Login
-      uses: Azure/login@v1.4.3
+    - name: Path Tag Bumper
+      id: tag-bumper
+      uses: gls-denmark/path-tag-bumper@1.0.0
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       with:
-        client-id: ${{inputs.azure-client-id}}
-        tenant-id: ${{inputs.azure-tenant-id}}
-        subscription-id: ${{inputs.azure-subscription}}
-
-    - name: Login to container registry
+        prefix-tag: ${{ inputs.prefix-tag }}
+        github-token: ${{ inputs.github-token }}
+    - name: Print New Tag
+      id: new-tag
+      run: echo "::set-output name=generated-tag::${{steps.tag-bumper.outputs.new-tag}}"
       shell: bash
-      run: az acr login --name ${{inputs.azure-container-registry-name}}
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v2.10.0
-      with:
-        secrets: |
-          "GH_PAT=${{inputs.github-token}}"
-        file: ${{inputs.docker-file-path}}
-        tags: |
-          ${{inputs.azure-container-registry-name}}.azurecr.io/${{inputs.service-name}}:${{ inputs.version-tag }} , ${{inputs.azure-container-registry-name}}.azurecr.io/${{inputs.service-name}}:latest
-        push: true
