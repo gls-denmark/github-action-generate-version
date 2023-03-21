@@ -1,5 +1,5 @@
-name: "Get & Cache Dependencies"
-description: "Get the dependencies (via npm) and cache them."
+name: "Create Dockerfile and push to ACR"
+description: ""
 inputs:
   azure-client-id:
     description: "The AD App Registrations id"
